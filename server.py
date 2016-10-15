@@ -5,7 +5,7 @@ import markdown
 
 app = Flask("Wiki")
 
-db = pg.DB(dbname='wiki')
+db = pg.DB(dbname='wiki') 
 
 @app.route('/')
 def wikihome():
