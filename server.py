@@ -1,6 +1,7 @@
 from flask import Flask, render_template, redirect, request
 import pg
-import wiki_linkify
+from wiki_linkify import wiki_linkify
+import markdown
 
 app = Flask("Wiki")
 
@@ -15,89 +16,90 @@ def wiki(page_name):
     # id = int(request.form.get('id'))
 
 
-    query = db.query("select * from page where title = '%s'" % page_name)
+    query = db.query("select title.title, page.page_content from page inner join title on page.title_id = title.id where title = '%s'" % page_name)
     result_list = query.namedresult()
-    if len(result_list) == 0:
+    if len(result_list) > 0:
+        wiki_page = result_list[0]
+        wiki_linkify_content = markdown.markdown(wiki_linkify(wiki_page.page_content))
+        return render_template(
+            'view.html',
+            title= page_name,
+            page_name = page_name,
+            wiki_page = wiki_page,
+            wiki_linkify_content = wiki_linkify_content
+            )
+    else:
         return render_template(
             'placeholder.html',
             title= page_name,
-            page_name = page_name
-            )
-    else:
-        wiki_page = result_list[0]
-        has_content = False
+            page_name=page_name)
 
-    # if id == True:
-    #     query = db.query('''
-    #     select * from wiki
-    #     where id = %d''' % id)
-    #     entry = query.namedresults()[0]
-    #
-    #
+
+
+    # if len(wiki_linkify_content) > 0:
+    #     has_content = True
     # else:
-    if len(wiki_page.page_content) > 0:
-        has_content = True
-    else:
-        pass
-    return render_template(
-        'placeholder.html',
-        title= page_name,
-        wiki_page = wiki_page,
-        has_content = has_content,
-        page_name = page_name
-    )
+    #     pass
+    # return render_template(
+    #     'placeholder.html',
+    #     title= page_name,
+    #     wiki_page = wiki_page,
+    #
+    #     page_name = page_name
+    # )
 
 @app.route('/<page_name>/edit')
 def wikiedit(page_name):
-    query = db.query("select * from page where title = '%s'" % page_name)
-
-
+    query = db.query("select title.title, page.page_content from page inner join title on page.title_id = title.id where title = '%s'" % page_name)
 
     page_name = page_name
     result_list = query.namedresult()
 
-    if len(result_list) == 0:
+    if len(result_list) > 0:
         wiki_page = result_list[0]
-        title=page_name
-        return render_template(
-        'edit.html'
+
+        return render_template ('edit.html',
+        title=page_name,
+        page_name =page_name,
+        wiki_page = wiki_page
         )
 
 
-    else:
 
-        return redirect('/' + page_name)
+    else:
+        return render_template(
+        'edit.html',
+        page_name = page_name
+        )
 
 
 @app.route('/<page_name>/save', methods= ['POST'])
 def newpage(page_name):
 
-    query = db.query("select * from page where title = '%s'" % page_name)
-    result_list = query.namedresult(),
-    wiki_page = result_list[0]
+    query = db.query("select title.title, page.page_content, title.id as title_id from page inner join title on page.title_id = title.id where title.title = '%s'" % page_name)
+    result_list = query.namedresult()
 
     page_content = request.form.get('page_content')
     title = page_name
     id = request.form.get('id')
 
-    if len(wiki_page) == 0:
+    if len(result_list) == 0:
         db.insert(
-        'page',
-        page_content = wiki_linkify(page_content),
-        title = title)
-        return redirect('/' + page_name)
-
+            'title', {
+                'title': page_name
+            }
+        )
     else:
-        db.update('page', {
-        'id': id,
-        'page_content': page_content
+        pass
+    db.insert(
+        'page', {
+            'page_content': page_content,
+            'last_modified_date': "",
+            'title_id': id
+        }
+    )
 
-        })
-        return redirect('/' + page_name)
-    # db.update('page'), {
-    # 'page_content': page_content
-    # })
-
+    return redirect('/' + page_name)
 
 
 if __name__ == '__main__':

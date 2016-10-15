@@ -2,14 +2,27 @@
     {% block body %}
 
     Edit: {{page_name}}
+    {% if wiki_page %}
     <form action="/{{page_name}}/save" method = "POST">
       <input type="hidden" name="id" value="{{wiki_page.id}}">
     <div class="form-group">
-      <textarea name = "page_content" class ="form-control" rows="4" cols ="50" placeholder = "Type Here">
-        {{wiki_page.page_content}}
-      </textarea>
+      <textarea name = "page_content" class ="form-control" rows="4" cols ="50" placeholder = "Type Here">{{wiki_page.page_content}}</textarea>
 
       <button type="submit" class="btn btn-default navbar-btn form-control">Submit</button>
     </div>
   </form>
+
+
+  {% elif not wiki_page %}
+  <form action="/{{page_name}}/save" method = "POST">
+  <div class="form-group">
+    <textarea name = "page_content" class ="form-control" rows="4" cols ="50" placeholder = "Type Here">
+    </textarea>
+
+    <button type="submit" class="btn btn-default navbar-btn form-control">Submit</button>
+  </div>
+</form>
+  {% endif %}
+
+
       {% endblock %}

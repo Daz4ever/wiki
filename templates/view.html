@@ -1,0 +1,6 @@
+{% extends "layout.html" %}
+    {% block body %}
+    <h2>{{page_name}}</h2>
+      <p>{{wiki_linkify_content | safe}}</p>
+      <a href="/{{page_name}}/edit">Edit {{page_name}} page</a>
+    {% endblock %}

@@ -1,10 +1,6 @@
 {% extends "layout.html" %}
     {% block body %}
     <h2>{{page_name}}</h2>
-     {% if has_content %}
-      <p>{{wiki_page.page_content}}</p>
-      {% else %}
       <h1>This Page Has Not Been Created</h1>
-      {% endif %}
       <a href="/{{page_name}}/edit">Edit this Page</a>
     {% endblock %}
