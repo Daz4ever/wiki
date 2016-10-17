@@ -1,0 +1,10 @@
+{% extends "layout.html" %}
+    {% block body %}
+
+  <h1>Welcome</h1>
+  <p>Hello, {{session['username'] or 'there'}}!</p>
+  <p><a href="/sign_up">Sign Up</a></p>
+  <p><a href="/login">Login</a></p>
+  <p><a href="/logout">Logout</a></p>
+  <p><a href="/all_pages">All Wiki Pages</a></p>
+    {% endblock %}

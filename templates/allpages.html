@@ -1,0 +1,9 @@
+{% extends "layout.html" %}
+    {% block body %}
+
+    <ul>
+    {% for i in query_list %}
+    <li><a href="/{{i.title}}">{{i.title}}</a></li>
+    {% endfor %}
+    </ul>
+    {% endblock %}

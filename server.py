@@ -1,22 +1,107 @@
-from flask import Flask, render_template, redirect, request
+from dotenv import load_dotenv, find_dotenv
+load_dotenv(find_dotenv())
+
+from flask import Flask, render_template, redirect, request, session
 import pg
 from wiki_linkify import wiki_linkify
 import markdown
+import os
 
-app = Flask("Wiki")
+tmp_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
 
-db = pg.DB(dbname='wiki')
+app = Flask('Wiki', template_folder=tmp_dir)
+
+app.secret_key = 'whatever'
+
+db = pg.DB(
+    dbname=os.environ.get('PG_DBNAME'),
+    host=os.environ.get('PG_HOST'),
+    user=os.environ.get('PG_USERNAME'),
+    passwd=os.environ.get('PG_PASSWORD')
+)
+
+@app.route('/login')
+def login():
+
+
+    return render_template(
+    'login.html'
+    )
+
+@app.route('/submit_login', methods = ['POST'])
+def submit_login():
+    username = request.form.get('username')
+    password = request.form.get('password')
+    query= db.query('select * from users where username = $1', username)
+    query_list = query.namedresult()
+
+    if query_list > 0:
+        user = query_list[0]
+        print user
+        if password == user.password:
+            session['username'] = username
+            return redirect('/')
+        else:
+            return redirect('/login')
+    else:
+        return redirect('/login')
+
+@app.route('/sign_up')
+def signup():
+
+    return render_template(
+    'signup.html'
+    )
+
+@app.route('/submit_sign_up', methods = ['POST'])
+def submit_sign_up():
+
+    username = request.form.get('username')
+    password = request.form.get('password')
+
+    query = db.query("select * from users where username = $1", username)
+    query_list = query.namedresult()
+    if len(query_list) > 0:
+            return redirect('/login')
+    else:
+        db.insert(
+        'users',
+        username=username,
+        password=password
+        )
+        return redirect('/login')
+
+@app.route('/logout')
+def logout():
+    del session['username']
+
+    return redirect('/login')
+
 
 @app.route('/')
 def wikihome():
-    return redirect('/Homepage')
 
+    return render_template(
+    'homepage.html'
+    )
+
+
+@app.route('/all_pages')
+
+def all_pages():
+    query=db.query('''select title from title''')
+    query_list = query.namedresult()
+
+    return render_template('allpages.html',
+    title='All Pages',
+    query_list= query_list
+    )
 @app.route('/<page_name>')
 def wiki(page_name):
     # id = int(request.form.get('id'))
 
 #since there are multipule content pages you have to select from page_id in descending order to get the newest one
-    query = db.query("select title.id as title_id, page.id as page_id, title.title, page.page_content from page inner join title on page.title_id = title.id where title = '%s' order by page_id desc" % page_name)
+    query = db.query("select title.id as title_id, page.id as page_id, title.title, page.page_content from page inner join title on page.title_id = title.id where title = $1 order by page_id desc", page_name)
     result_list = query.namedresult()
     if len(result_list) > 0:
         wiki_page = result_list[0]
@@ -50,7 +135,7 @@ def wiki(page_name):
 
 @app.route('/<page_name>/edit')
 def wikiedit(page_name):
-    query = db.query("select title.id as title_id, page.id as page_id, title.title, page.page_content from page inner join title on page.title_id = title.id where title = '%s' order by page_id desc" % page_name)
+    query = db.query("select title.id as title_id, page.id as page_id, title.title, page.page_content from page inner join title on page.title_id = title.id where title = $1 order by page_id desc", page_name)
 
     page_name = page_name
     result_list = query.namedresult()
@@ -76,7 +161,7 @@ def wikiedit(page_name):
 @app.route('/<page_name>/save', methods= ['POST'])
 def newpage(page_name):
 
-    query = db.query("select title.id as id from page inner join title on page.title_id = title.id where title.title = '%s'" % page_name)
+    query = db.query("select title.id as id from page inner join title on page.title_id = title.id where title.title = $1", page_name)
 
     result_list = query.namedresult()
 
@@ -84,7 +169,7 @@ def newpage(page_name):
     title = page_name
     # id = request.form.get('id')
 
-    print "THe length is %s" % len(result_list)
+    print "THe length is $1", len(result_list)
     if len(result_list) < 1:
         db.insert(
             'title', {
@@ -92,7 +177,7 @@ def newpage(page_name):
 
             }
         )
-        query = db.query("select id from title where title.title = '%s'" % page_name)
+        query = db.query("select id from title where title.title = $1", page_name)
         result_list = query.namedresult()
     else:
         pass
