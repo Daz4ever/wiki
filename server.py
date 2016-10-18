@@ -1,11 +1,10 @@
 from dotenv import load_dotenv, find_dotenv
 load_dotenv(find_dotenv())
 
-from flask import Flask, render_template, redirect, request, session
+from flask import Flask, render_template, redirect, request, session, flash
 import pg
 from wiki_linkify import wiki_linkify
-import markdown
-import os
+import markdown, os
 
 tmp_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
 
@@ -34,16 +33,17 @@ def submit_login():
     password = request.form.get('password')
     query= db.query('select * from users where username = $1', username)
     query_list = query.namedresult()
+    print 'HERE : ', query_list
 
-    if query_list > 0:
+    if len(query_list) > 0:
         user = query_list[0]
-        print user
         if password == user.password:
             session['username'] = username
             return redirect('/')
         else:
             return redirect('/login')
     else:
+        flash('username or password was incorrect')
         return redirect('/login')
 
 @app.route('/sign_up')
@@ -61,8 +61,11 @@ def submit_sign_up():
 
     query = db.query("select * from users where username = $1", username)
     query_list = query.namedresult()
+    #if a specific username is already taken redirect back to the sign up page with a flash note saying its already been taken else insert the users input into the database
     if len(query_list) > 0:
-            return redirect('/login')
+        flash('%s has already been taken' % username)
+        return redirect('/sign_up')
+
     else:
         db.insert(
         'users',
@@ -120,43 +123,32 @@ def wiki(page_name):
             page_name=page_name)
 
 
-
-    # if len(wiki_linkify_content) > 0:
-    #     has_content = True
-    # else:
-    #     pass
-    # return render_template(
-    #     'placeholder.html',
-    #     title= page_name,
-    #     wiki_page = wiki_page,
-    #
-    #     page_name = page_name
-    # )
-
 @app.route('/<page_name>/edit')
 def wikiedit(page_name):
     query = db.query("select title.id as title_id, page.id as page_id, title.title, page.page_content from page inner join title on page.title_id = title.id where title = $1 order by page_id desc", page_name)
 
-    page_name = page_name
-    result_list = query.namedresult()
-    print result_list
-    if len(result_list) > 0:
-        wiki_page = result_list[0]
+    if 'username' in session:
+        # page_name = page_name
+        result_list = query.namedresult()
+        print result_list
+        if len(result_list) > 0:
+            wiki_page = result_list[0]
 
-        return render_template ('edit.html',
-        title=page_name,
-        page_name =page_name,
-        wiki_page = wiki_page
-        )
+            return render_template ('edit.html',
+            title=page_name,
+            page_name =page_name,
+            wiki_page = wiki_page
+            )
 
 
 
+        else:
+            return render_template(
+            'edit.html',
+            page_name = page_name
+            )
     else:
-        return render_template(
-        'edit.html',
-        page_name = page_name
-        )
-
+        return redirect('/login')
 
 @app.route('/<page_name>/save', methods= ['POST'])
 def newpage(page_name):
